@@ -1,10 +1,78 @@
-import { createContext, useContext, useEffect, useRef, useState } from "react"
+import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react"
 import { useReducedMotion } from "motion/react"
 
 export const easeOut = [0.16, 1, 0.3, 1]
 
 export const UnidadeContext = createContext(null)
 export const useUnidade = () => useContext(UnidadeContext)
+
+export const SomContext = createContext(null)
+export const useSom = () => useContext(SomContext)
+
+function visivelDe(video) {
+  const r = video.getBoundingClientRect()
+  return Math.min(r.bottom, window.innerHeight) - Math.max(r.top, 0)
+}
+
+function escolherVideo(videos) {
+  const ativos = videos.filter((v) => v.hasAttribute("data-som-ativo"))
+  const visiveis = (lista) =>
+    lista
+      .map((v) => ({ v, visivel: visivelDe(v) }))
+      .filter((item) => item.visivel > 48)
+      .sort((a, b) => b.visivel - a.visivel)
+  const preferidos = visiveis(ativos)
+  if (preferidos.length) return preferidos[0].v
+  const qualquer = visiveis(videos)
+  return qualquer[0]?.v ?? null
+}
+
+function aplicarSom(ligado) {
+  const videos = [...document.querySelectorAll("video[data-som]")]
+  if (!ligado) {
+    for (const v of videos) v.muted = true
+    return
+  }
+  const dono = escolherVideo(videos)
+  for (const v of videos) {
+    if (v === dono) {
+      v.muted = false
+      v.volume = 1
+      v.play().catch(() => {})
+    } else {
+      v.muted = true
+    }
+  }
+}
+
+export function SomProvider({ children }) {
+  const [comSom, setComSom] = useState(false)
+  const comSomRef = useRef(false)
+  comSomRef.current = comSom
+
+  const setSom = (ligado) => {
+    aplicarSom(ligado)
+    setComSom(ligado)
+  }
+
+  const toggleSom = () => setSom(!comSomRef.current)
+
+  useEffect(() => {
+    const onScroll = () => {
+      if (comSomRef.current) aplicarSom(true)
+    }
+    window.addEventListener("scroll", onScroll, { passive: true })
+    window.addEventListener("resize", onScroll)
+    return () => {
+      window.removeEventListener("scroll", onScroll)
+      window.removeEventListener("resize", onScroll)
+    }
+  }, [])
+
+  const valor = useMemo(() => ({ comSom, setSom, toggleSom, atualizar: () => aplicarSom(comSomRef.current) }), [comSom])
+
+  return <SomContext.Provider value={valor}>{children}</SomContext.Provider>
+}
 
 export function useMedia(query) {
   const [ok, setOk] = useState(() => (typeof window === "undefined" ? false : window.matchMedia(query).matches))
@@ -133,22 +201,37 @@ export function Barcode({ texto, height = 34, className }) {
   )
 }
 
-/* Video mudo em loop: toca só quando visível; respeita "reduzir movimento". */
+/* Video em loop: toca só quando visível; o mudo fica a cargo do SomProvider. */
 export function LoopVideo({ src, poster, ativo = true, eager = false, className, ...rest }) {
   const ref = useRef(null)
   const reduzir = useReducedMotion()
+  const som = useSom()
+  const somRef = useRef(som)
+  somRef.current = som
+
+  useEffect(() => {
+    const v = ref.current
+    if (!v) return
+    v.muted = true
+  }, [src])
 
   useEffect(() => {
     const v = ref.current
     if (!v) return
     if (reduzir || !ativo) {
       v.pause()
+      v.muted = true
+      somRef.current?.atualizar()
       return
     }
     const io = new IntersectionObserver(
       ([entrada]) => {
-        if (entrada.isIntersecting) v.play().catch(() => {})
-        else v.pause()
+        if (entrada.isIntersecting) {
+          v.play().catch(() => {})
+          somRef.current?.atualizar()
+        } else {
+          v.pause()
+        }
       },
       { threshold: 0.2 },
     )
@@ -162,7 +245,8 @@ export function LoopVideo({ src, poster, ativo = true, eager = false, className,
       className={className}
       src={src}
       poster={poster}
-      muted
+      data-som
+      {...(ativo ? { "data-som-ativo": "" } : {})}
       loop
       playsInline
       preload={eager ? "auto" : "metadata"}

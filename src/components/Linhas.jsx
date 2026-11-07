@@ -1,13 +1,18 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { AnimatePresence, motion } from "motion/react"
 import { linhas, tambem, waLink } from "../data.js"
-import { IconWhats, LoopVideo, easeOut, useMedia, useUnidade } from "../ui.jsx"
+import { IconWhats, LoopVideo, easeOut, useMedia, useSom, useUnidade } from "../ui.jsx"
 
 const mola = { type: "spring", bounce: 0.1, visualDuration: 0.55 }
 
 function Caixa({ linha, ativa, estreita, onAtivar, indice }) {
   const { unidade } = useUnidade()
+  const { atualizar } = useSom()
   const painelId = `linha-${linha.id}`
+
+  useEffect(() => {
+    atualizar()
+  }, [ativa, atualizar])
 
   const alvo = estreita
     ? { height: ativa ? 470 : 84 }

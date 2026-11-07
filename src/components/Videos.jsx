@@ -1,14 +1,14 @@
 import { useEffect, useRef, useState } from "react"
 import { AnimatePresence, motion, useMotionValue, useReducedMotion } from "motion/react"
 import { clipes, instagram } from "../data.js"
-import { IconExterno, IconInsta, IconMudo, IconPause, IconPlay, IconSom, easeOut } from "../ui.jsx"
+import { IconExterno, IconInsta, IconPause, IconPlay, easeOut, useSom } from "../ui.jsx"
 
 export function Videos({ clipeId, setClipeId }) {
   const secao = useRef(null)
   const videoRef = useRef(null)
   const reduzir = useReducedMotion()
+  const { atualizar } = useSom()
   const [tocando, setTocando] = useState(!reduzir)
-  const [comSom, setComSom] = useState(false)
   const [visivel, setVisivel] = useState(false)
   const progresso = useMotionValue(0)
 
@@ -28,19 +28,10 @@ export function Videos({ clipeId, setClipeId }) {
   useEffect(() => {
     const v = videoRef.current
     if (!v) return
-    v.muted = !comSom
-    v.volume = 1
-    if (tocando && visivel) {
-      v.play().catch(() => {
-        if (comSom) {
-          v.muted = true
-          v.play().catch(() => {})
-        }
-      })
-    } else {
-      v.pause()
-    }
-  }, [tocando, visivel, clipeId, comSom])
+    if (tocando && visivel) v.play().catch(() => {})
+    else v.pause()
+    atualizar()
+  }, [tocando, visivel, clipeId, atualizar])
 
   const proximo = () => setClipeId(clipes[(indice + 1) % clipes.length].id)
 
@@ -52,7 +43,7 @@ export function Videos({ clipeId, setClipeId }) {
         </h2>
         <p>
           Os reels do <a href={instagram.url} target="_blank" rel="noreferrer">{instagram.usuario}</a>, com 30,5 mil
-          seguidores. Toque no som para ouvir a loja.
+          seguidores. O alto-falante no canto liga o som em qualquer parte da página.
         </p>
       </div>
 
@@ -68,7 +59,8 @@ export function Videos({ clipeId, setClipeId }) {
                 className="celular__video"
                 src={clipe.midia.video}
                 poster={clipe.midia.poster}
-                muted={!comSom}
+                data-som
+                {...(tocando && visivel ? { "data-som-ativo": "" } : {})}
                 playsInline
                 preload="metadata"
                 aria-label={clipe.titulo}
@@ -84,24 +76,6 @@ export function Videos({ clipeId, setClipeId }) {
               />
             </AnimatePresence>
             <div className="celular__controles">
-              {!comSom && (
-                <span className="celular__aviso" aria-hidden="true">
-                  Ligar o som
-                </span>
-              )}
-              <button
-                type="button"
-                className="celular__controle"
-                onClick={() => {
-                  setComSom((s) => !s)
-                  setTocando(true)
-                  setVisivel(true)
-                }}
-                aria-label={comSom ? "Desligar som" : "Ligar som"}
-                aria-pressed={comSom}
-              >
-                {comSom ? <IconSom size={22} /> : <IconMudo size={22} />}
-              </button>
               <button
                 type="button"
                 className="celular__controle"

@@ -1467,6 +1467,41 @@ button {
 
 /* ------------------------------------------------------ reducao de movimento */
 
+/* -------------------------------------------------------------- som global */
+
+.botao-som {
+  position: fixed;
+  right: max(1.1rem, env(safe-area-inset-right));
+  bottom: max(1.4rem, env(safe-area-inset-bottom));
+  z-index: 80;
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  padding: 0;
+  border: 3px solid var(--tinta);
+  border-radius: 50%;
+  background: var(--amarelo);
+  color: var(--tinta);
+  box-shadow: 0 16px 28px -10px rgba(0, 0, 0, 0.55);
+  cursor: pointer;
+}
+.botao-som[aria-pressed="true"] {
+  background: var(--tinta);
+  color: var(--amarelo);
+  border-color: var(--amarelo);
+}
+.botao-som:focus-visible {
+  outline: 3px solid var(--tinta);
+  outline-offset: 3px;
+}
+.botao-som[aria-pressed="true"]:focus-visible {
+  outline-color: var(--amarelo);
+}
+.botao-som svg {
+  display: block;
+}
+
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
@@ -1474,7 +1509,8 @@ button {
   .btn,
   .link-baixo svg,
   .faixa-bf__botao,
-  .celular__controle {
+  .celular__controle,
+  .botao-som {
     transition: none;
   }
 }
